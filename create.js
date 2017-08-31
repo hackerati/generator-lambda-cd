@@ -35,17 +35,18 @@ function addCommitPush(commitString) {
   });
 }
 
-function initializeGit() {
-  console.log(`Attempting to initialize git in ${dir}`);
+function createRepo() {
+  console.log(`Attempting to create repo in ${dir}`);
   exec(`
+    git clone git@github.com:hackerati/skills-framework-template.git ${dir} &&
     pushd ${dir} &&
-    touch .gitignore
+    rm -rf .git/ &&
     git init &&
     git remote add origin ${program.remote} &&
     popd
     `, (err, stdout, stderr) => {
     if (err) {
-      console.error(`Error initializing and pushing git directory: ${err}.`);
+      console.error(`Error creating repo: ${err}.`);
       console.log(`stdout: ${stdout}`);
       console.log(`stderr: ${stderr}`);
     } else {
@@ -58,9 +59,7 @@ function initializeGit() {
 function makeDir() {
   console.log(`Attempting to create directory ${dir}`);
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir);
-    console.log(`Created directory ${dir}`);
-    initializeGit();
+    createRepo();
   } else {
     console.log(`The subdirectory ${dir} already exists.`);
     addCommitPush('Add code');
