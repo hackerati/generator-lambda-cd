@@ -2,10 +2,12 @@
 Tool to help developers quickly create skills for text- and voice-based chatbots
 
 ## usage
-_Requires node_
+Requires:
+- [git](https://git-scm.com/)
+- [node](https://nodejs.org/)
+- [hub](https://hub.github.com/)
+- [travis cli](https://github.com/travis-ci/travis.rb#the-travis-client-)
 
-1. Create an empty remote repo
-2. Clone this project
-3. From this project's root directory, run `node create.js <empty repo name> <empty repo url>`
-
-Now you have an initialized empty repo.
+1. Clone this project
+2. From this project's root directory, run `./create.sh`
+3. Provide the necessary info to have a deployed Lambda function with Travis CI enabled

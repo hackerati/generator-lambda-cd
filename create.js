@@ -1,6 +1,6 @@
 const program = require('commander');
 
-const { checkDir, createRepo, addCommitPush } = require('./lib');
+const { checkDir, createRepo, addCommit } = require('./lib');
 
 program
   .version('0.0.1')
@@ -19,9 +19,11 @@ const run = async () => {
   try {
     await checkDir(dir);
     await createRepo(dir, program.remote);
-    await addCommitPush(dir, program.remote, 'Initialise AI repo');
+    await addCommit(dir, program.remote, 'Initialise AI repo');
   } catch (err) {
-    console.log(`Error: ${err}`);
+    if (err) {
+      console.log(`Error: ${err}`);
+    }
   }
 };
 
