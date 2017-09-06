@@ -1,0 +1,30 @@
+{
+  "name": "generated-lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lambda.js",
+  "scripts": {
+    "test": "./node_modules/eslint/bin/eslint.js ./ && node_modules/.bin/mocha test/",
+    "build": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hackerati/generated-lambda.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hackerati/generated-lambda/issues"
+  },
+  "homepage": "https://github.com/hackerati/generated-lambda#readme",
+  "devDependencies": {
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb": "^14.1.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jsx-a11y": "^4.0.0",
+    "eslint-plugin-react": "^7.0.0",
+    "lambda-local": "^1.4.2",
+    "mocha": "^3.5.0",
+    "sinon": "^3.2.1"
+  }
+}

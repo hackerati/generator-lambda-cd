@@ -9,7 +9,18 @@ describe('generator-lambda-cd:app', () => {
 
   it('creates files', () => {
     assert.file([
-      'dummyfile.txt',
+      'event/sample.js',
+      'test/test.js',
+      '.eslintignore',
+      '.eslintrc',
+      '.gitignore',
+      '.travis.yml',
+      'lambda.js',
+      'main.tf',
+      'Makefile',
+      'package.json',
+      'README.md',
+      'yarn.lock',
     ]);
   });
 });

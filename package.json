@@ -2,7 +2,10 @@
   "name": "generator-lambda-cd",
   "version": "0.0.0",
   "description": "Continous Deployment for AWS Lambda with Travis CI",
-  "homepage": "",
+  "bugs": {
+    "url": "https://github.com/hackerati/generator-lambda-cd/issues"
+  },
+  "homepage": "https://github.com/hackerati/generator-lambda-cd#readme",
   "author": "Hackerati",
   "files": [
     "generators"
@@ -39,7 +42,7 @@
   "scripts": {
     "prepublish": "nsp check",
     "pretest": "eslint . --fix",
-    "test": "jest"
+    "test": "jest __tests__/"
   },
   "eslintConfig": {
     "extends": "airbnb",
@@ -48,6 +51,6 @@
       "node": true
     }
   },
-  "repository": "git@github.com:hackerati/skills-framework.git",
+  "repository": "git@github.com:hackerati/generator-lambda-cd.git",
   "license": "MIT"
 }
