@@ -1,12 +1,53 @@
 {
-  "dependencies": {
-    "commander": "^2.11.0",
+  "name": "generator-lambda-cd",
+  "version": "0.0.0",
+  "description": "Continous Deployment for AWS Lambda with Travis CI",
+  "homepage": "",
+  "author": "Hackerati",
+  "files": [
+    "generators"
+  ],
+  "main": "generators/index.js",
+  "keywords": [
+    "aws",
+    "lambda",
+    "continuous deployment",
+    "travis",
+    "yeoman-generator"
+  ],
+  "devDependencies": {
+    "yeoman-test": "^1.6.0",
+    "yeoman-assert": "^3.0.0",
+    "coveralls": "^2.13.1",
+    "nsp": "^2.6.3",
     "eslint": "^3.19.0",
     "eslint-config-airbnb": "^14.1.0",
     "eslint-plugin-import": "^2.2.0",
     "eslint-plugin-jsx-a11y": "^4.0.0",
     "eslint-plugin-react": "^7.0.0",
-    "shelljs": "^0.7.8",
-    "travis-ci": "^2.1.1"
-  }
+    "jest": "^19.0.2",
+    "jest-cli": "^20.0.0"
+  },
+  "dependencies": {
+    "yeoman-generator": "^1.0.0",
+    "chalk": "^1.1.3",
+    "yosay": "^2.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "scripts": {
+    "prepublish": "nsp check",
+    "pretest": "eslint . --fix",
+    "test": "jest"
+  },
+  "eslintConfig": {
+    "extends": "airbnb",
+    "env": {
+      "jest": true,
+      "node": true
+    }
+  },
+  "repository": "git@github.com:hackerati/skills-framework.git",
+  "license": "MIT"
 }

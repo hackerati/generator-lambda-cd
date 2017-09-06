@@ -1,13 +1,38 @@
-# skills-framework
-Tool to help developers quickly create skills for text- and voice-based chatbots
+# generator-lambda-cd [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][daviddm-image]][daviddm-url] [![Coverage percentage][coveralls-image]][coveralls-url]
+> Continous Deployment for AWS Lambda with Travis CI
 
-## usage
-Requires:
-- [git](https://git-scm.com/)
-- [node](https://nodejs.org/)
-- [hub](https://hub.github.com/)
-- [travis cli](https://github.com/travis-ci/travis.rb#the-travis-client-)
+## Installation
 
-1. Clone this project
-2. From this project's root directory, run `./create.sh`
-3. Provide the necessary info to have a deployed Lambda function with Travis CI enabled
+First, install [Yeoman](http://yeoman.io) and generator-lambda-cd using [npm](https://www.npmjs.com/) (we assume you have pre-installed [node.js](https://nodejs.org/)).
+
+```bash
+npm install -g yo
+npm install -g generator-lambda-cd
+```
+
+Then generate your new project:
+
+```bash
+yo lambda-cd
+```
+
+## Getting To Know Yeoman
+
+ * Yeoman has a heart of gold.
+ * Yeoman is a person with feelings and opinions, but is very easy to work with.
+ * Yeoman can be too opinionated at times but is easily convinced not to be.
+ * Feel free to [learn more about Yeoman](http://yeoman.io/).
+
+## License
+
+MIT ©Hackerati
+
+
+[npm-image]: https://badge.fury.io/js/generator-lambda-cd.svg
+[npm-url]: https://npmjs.org/package/generator-lambda-cd
+[travis-image]: https://travis-ci.org/hackerati/generator-lambda-cd.svg?branch=master
+[travis-url]: https://travis-ci.org/hackerati/generator-lambda-cd
+[daviddm-image]: https://david-dm.org/hackerati/generator-lambda-cd.svg?theme=shields.io
+[daviddm-url]: https://david-dm.org/hackerati/generator-lambda-cd
+[coveralls-image]: https://coveralls.io/repos/hackerati/generator-lambda-cd/badge.svg
+[coveralls-url]: https://coveralls.io/r/hackerati/generator-lambda-cd

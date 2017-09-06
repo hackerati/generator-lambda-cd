@@ -1,0 +1,9 @@
+{
+  "generator-node": {
+    "promptValues": {
+      "authorName": "Bobby Yankou",
+      "authorEmail": "thisisjackolantern@gmail.com",
+      "authorUrl": "thomkrillis.github.io"
+    }
+  }
+}
