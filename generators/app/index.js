@@ -6,7 +6,7 @@ module.exports = class extends Generator {
   constructor(args, opts) {
     super(args, opts);
 
-    this.option('skipDeployment');
+    this.option('deploy');
   }
 
   prompting() {
@@ -52,7 +52,7 @@ module.exports = class extends Generator {
   }
 
   end() {
-    if (!this.options.skipDeployment) {
+    if (this.options.deploy) {
       // Initialize local repo
       this.spawnCommandSync('git', ['init']);
       this.spawnCommandSync('git', ['add', '.']);
