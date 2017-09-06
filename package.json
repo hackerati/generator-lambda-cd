@@ -39,6 +39,10 @@
   "jest": {
     "testEnvironment": "node"
   },
+  "engines": {
+    "node": ">=6.0.0"
+  },
+  "engineStrict": true,
   "scripts": {
     "prepublish": "nsp check",
     "pretest": "eslint . --fix",
