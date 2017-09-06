@@ -5,7 +5,7 @@ const helpers = require('yeoman-test');
 
 describe('generator-lambda-cd:app', () => {
   beforeAll(() => helpers.run(path.join(__dirname, '../generators/app'))
-      .withPrompts({ someAnswer: true }));
+      .withOptions({ skipDeployment: true }));
 
   it('creates files', () => {
     assert.file([
