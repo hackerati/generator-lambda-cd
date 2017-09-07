@@ -1,6 +1,6 @@
 {
   "name": "generator-lambda-cd",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "Continous Deployment for AWS Lambda with Travis CI",
   "bugs": {
     "url": "https://github.com/hackerati/generator-lambda-cd/issues"
