@@ -37,6 +37,7 @@
     "yosay": "^2.0.0"
   },
   "jest": {
+    "collectCoverage": true,
     "testEnvironment": "node"
   },
   "engines": {
