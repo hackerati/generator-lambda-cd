@@ -1,8 +1,15 @@
 sudo: false
 language: node_js
 node_js:
-  - 6
-  - node
+- 6
+- node
 cache:
   yarn: true
-after_script: 'cat ./coverage/lcov.info | coveralls'
+after_script: cat ./coverage/lcov.info | coveralls
+deploy:
+  provider: npm
+  email: will@hackerati.us
+  api_key:
+    secure: jc/VU2RN/fHf/p0ISuN9D41yZDKExTxISPp2pULWnWD2mvtpBdky2vVrpVD/p8NoX3D13nDtFWPrcm8UhWZPRE6XmZjQYrLJ31ap5I4cKiAEarw5OicA/xxIkAeeSg140LfoBJcRQHj/dgV9faA38fGHvgHqrgNeALtTFonpnLdv5rltjTsmuQA0ggPlaEABqQXbnar0rRK0geLuIwUL1LOcEz7Lfdtcbcg6bQZXE9h4gnN8vTkRCzu4I/SA9uTKKczqR8rrzd8BydTPvBzok1cjuF6kkU+sFGkYKz3kSoNf4fsnsEsEpnBhlCPclDw3NHiMtV6X655Zp/IswrZQlmqAcKgKPAlyunCy1Puij+802r9U+DSDHxbafivw1Lnr/FICcj9XdetgOiLIP4ibbZAqidY4Ei1Irm29/kPJxKdSAFxO9pvAWgHHr3z7NZUDvHD35JRd1HuS+axlD3Q1lCKbIuyYTvE5DrNRDGKs7ERIjwJsYfz2B7TFpcs8fHtoODvYpa7RYf8DpsnU240Xk0iI9B3ogPiFiQgKzNar0VZqjan3Zz9bdYyGsJ0WNIvZO1ItkfCkeO0lhPpLpfdyUEy96wlMepG30d61yo3bIIyf6XUiaXEPpfXVkuxqRE83ud2kb9f6U1BsoBvDZSUia/iFwIhB2QUPIFlhoGd2Os8=
+  on:
+    branch: master
