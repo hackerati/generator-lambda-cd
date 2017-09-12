@@ -8,6 +8,28 @@ module.exports = class extends Generator {
     super(args, opts);
 
     this.option('deploy');
+
+    this.createGitHubRepo = () => {
+      const headers = {
+        Authorization: `token ${this.props.token}`,
+        'User-Agent': this.props.githubUser,
+      };
+
+      const data = {
+        name: this.props.githubRepoName,
+        auto_init: false,
+        private: this.props.privateGithubRepo,
+      };
+
+      const options = {
+        url: 'https://api.github.com/user/repos',
+        headers,
+        method: 'POST',
+        body: JSON.stringify(data),
+      };
+
+      return requestPromise.post(options);
+    };
   }
 
   prompting() {
@@ -35,9 +57,15 @@ module.exports = class extends Generator {
       },
       {
         type: 'input',
-        name: 'repoName',
+        name: 'githubRepoName',
         message: 'What should the name of the GitHub repository be?',
         default: 'my-lambda-cd',
+      },
+      {
+        type: 'confirm',
+        name: 'privateGithubRepo',
+        message: 'Should your repository be private?',
+        default: false,
       },
       {
         type: 'input',
@@ -57,14 +85,17 @@ module.exports = class extends Generator {
       .then((props) => {
         this.props = props;
 
-        const dataString = `{"scopes": ["repo", "user"], "note": "getting-started-at-${Date.now()}"}`;
+        const data = {
+          scopes: ['repo', 'user'],
+          note: `getting-started-at-${Date.now()}`,
+        };
         const options = {
           url: 'https://api.github.com/authorizations',
           headers: {
             'User-Agent': props.githubUser,
           },
           method: 'POST',
-          body: dataString,
+          body: JSON.stringify(data),
           resolveWithFullResponse: true,
           auth: {
             user: props.githubUser,
@@ -127,20 +158,26 @@ module.exports = class extends Generator {
       this.spawnCommandSync('git', ['add', '.']);
       this.spawnCommandSync('git', ['commit', '-m', '"Initial commit"']);
       // Create remote remote repo and push
-      this.spawnCommandSync('hub', ['create']);
-      this.spawnCommandSync('git', ['push', 'origin', 'master']);
-      // Hook travis
-      const { status: loggedIn } = this.spawnCommandSync('travis', ['whoami']);
-      if (loggedIn !== 0) {
-        this.spawnCommandSync('travis', ['login']);
-      }
-      this.spawnCommandSync('travis', ['sync']);
-      this.spawnCommandSync('travis', ['enable']);
-      // Add AWS credentials to .travis.yml
-      this.spawnCommandSync('travis', ['encrypt', `AWS_ACCESS_KEY_ID=${this.props.id}`, `AWS_SECRET_ACCESS_KEY=${this.props.secret}`, '--override', '--add', 'env.matrix']);
-      // Trigger travis by pushing updated .travis.yml
-      this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml"']);
-      this.spawnCommandSync('git', ['push', 'origin', 'master']);
+      this.createGitHubRepo()
+        .then(() => {
+          this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${this.props.githubUser}/${this.props.githubRepoName}.git`]);
+          this.spawnCommandSync('git', ['push', 'origin', 'master']);
+          // Hook travis
+          const { status: loggedIn } = this.spawnCommandSync('travis', ['whoami']);
+          if (loggedIn !== 0) {
+            this.spawnCommandSync('travis', ['login']);
+          }
+          this.spawnCommandSync('travis', ['sync']);
+          this.spawnCommandSync('travis', ['enable']);
+          // Add AWS credentials to .travis.yml
+          this.spawnCommandSync('travis', ['encrypt', `AWS_ACCESS_KEY_ID=${this.props.id}`, `AWS_SECRET_ACCESS_KEY=${this.props.secret}`, '--override', '--add', 'env.matrix']);
+          // Trigger travis by pushing updated .travis.yml
+          this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml"']);
+          this.spawnCommandSync('git', ['push', 'origin', 'master']);
+        })
+        .catch(() => {
+          throw new Error('GitHub repository creation failed.');
+        });
     }
   }
 };
