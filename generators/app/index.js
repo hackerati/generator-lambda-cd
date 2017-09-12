@@ -55,6 +55,8 @@ module.exports = class extends Generator {
 
     return this.prompt(prompts)
       .then((props) => {
+        this.props = props;
+
         const dataString = `{"scopes": ["repo", "user"], "note": "getting-started-at-${Date.now()}"}`;
         const options = {
           url: 'https://api.github.com/authorizations',
@@ -70,9 +72,8 @@ module.exports = class extends Generator {
           },
         };
 
-        return requestPromise(options)
+        return requestPromise.post(options)
           .then((response) => {
-            this.props = props;
             this.props.token = JSON.parse(response.body).token;
             return true;
           })
@@ -92,18 +93,17 @@ module.exports = class extends Generator {
                 .then((githubProp) => {
                   options.headers['X-GitHub-OTP'] = githubProp.githubAuthCode;
 
-                  return requestPromise(options)
+                  return requestPromise.post(options)
                     .then((authenticationCodeResponse) => {
-                      this.props = props;
                       this.props.token = JSON.parse(authenticationCodeResponse.body).token;
                       return true;
                     })
                     .catch(() => {
-                      return false;
+                      throw new Error('GitHub login failed.');
                     });
                 });
             }
-            return false;
+            throw new Error('GitHub login failed.');
           });
       });
   }
