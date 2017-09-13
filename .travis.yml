@@ -5,7 +5,11 @@ node_js:
 - node
 cache:
   yarn: true
+
+install: npm install -g nsp
+
 after_script: cat ./coverage/lcov.info | coveralls
+
 deploy:
   provider: npm
   email: will@hackerati.us
