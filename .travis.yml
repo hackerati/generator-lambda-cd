@@ -6,7 +6,7 @@ node_js:
 cache:
   yarn: true
 
-install: npm install -g nsp
+install: yarn global add nsp
 
 after_script: cat ./coverage/lcov.info | coveralls
 
