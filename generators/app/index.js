@@ -1,135 +1,15 @@
 const Generator = require('yeoman-generator');
 const chalk = require('chalk');
 const yosay = require('yosay');
-const requestPromise = require('request-promise');
+const { getGithubAuth, getGithubAuthOtp, createGitHubRepo } = require('./utils/github');
+const { getTravisAccessToken, encryptTravisEnvVars, loopWhileSyncing } = require('./utils/travis');
+
 
 module.exports = class extends Generator {
   constructor(args, opts) {
     super(args, opts);
 
     this.option('deploy');
-
-    this.createGitHubRepo = () => {
-      const headers = {
-        Authorization: `token ${this.props.token}`,
-        'User-Agent': this.props.githubUser,
-      };
-
-      const data = {
-        name: this.props.githubRepoName,
-        auto_init: false,
-        private: this.props.privateGithubRepo,
-      };
-
-      const urlOption = this.props.githubOrgName ? `orgs/${this.props.githubOrgName}` : 'user';
-
-      const options = {
-        url: `https://api.github.com/${urlOption}/repos`,
-        headers,
-        method: 'POST',
-        body: JSON.stringify(data),
-      };
-
-      return requestPromise.post(options);
-    };
-
-    this.getTravisAccessToken = () => {
-      const headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'TravisMyClient/1.0.0',
-        Accept: 'application/vnd.travis-ci.2+json',
-      };
-      const data = {
-        github_token: this.props.token,
-      };
-      const options = {
-        url: 'https://api.travis-ci.org/auth/github',
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data),
-      };
-
-      return requestPromise.post(options);
-    };
-
-    this.loopWhileSyncing = () => this.whoAmI(this.props.travisAccessToken)
-      .then((whoAmIResponse) => {
-        this.props.isSyncing = JSON.parse(whoAmIResponse).user.is_syncing;
-        if (this.props.isSyncing) {
-          return this.loopWhileSyncing(this.props.travisAccessToken);
-        }
-        return this.enableGitHubRepo(this.props.travisAccessToken);
-      })
-      .catch(() => {
-        throw new Error('Syncing Travis account failed.');
-      });
-
-    this.whoAmI = () => {
-      const headers = {
-        'User-Agent': 'TravisMyClient/1.0.0',
-        Authorization: `token ${this.props.travisAccessToken}`,
-        Accept: 'application/vnd.travis-ci.2+json',
-      };
-
-      const options = {
-        url: 'https://api.travis-ci.org/users',
-        method: 'GET',
-        headers,
-      };
-
-      return requestPromise.get(options);
-    };
-
-    this.enableGitHubRepo = () => {
-      const headers = {
-        'User-Agent': 'TravisMyClient/1.0.0',
-        Authorization: `token ${this.props.travisAccessToken}`,
-        Accept: 'application/vnd.travis-ci.2+json',
-        'Content-Type': 'application/json',
-      };
-
-      const data = {
-        hook: {
-          active: true,
-        },
-      };
-
-      const options = {
-        url: 'https://api.travis-ci.org/hooks',
-        method: 'PUT',
-        headers,
-      };
-
-      return this.getUserHooks()
-        .then((hooksResponse) => {
-          const hooks = JSON.parse(hooksResponse).hooks;
-          data.hook.id = hooks.find(this.getRepositoryHook).id;
-          options.body = JSON.stringify(data);
-          return requestPromise.put(options);
-        })
-        .catch(() => {
-          throw new Error('Getting repository hooks failed.');
-        });
-    };
-
-    this.getUserHooks = () => {
-      const headers = {
-        'User-Agent': 'TravisMyClient/1.0.0',
-        Authorization: `token ${this.props.travisAccessToken}`,
-        Accept: 'application/vnd.travis-ci.2+json',
-        'Content-Type': 'application/json',
-      };
-
-      const options = {
-        url: 'https://api.travis-ci.org/hooks',
-        method: 'GET',
-        headers,
-      };
-
-      return requestPromise.get(options);
-    };
-
-    this.getRepositoryHook = element => element.name === this.props.githubRepoName;
   }
 
   prompting() {
@@ -147,13 +27,11 @@ module.exports = class extends Generator {
         type: 'input',
         name: 'id',
         message: 'Provide your AWS Access Key ID:',
-        default: 'Hello',
       },
       {
         type: 'password',
         name: 'secret',
         message: 'Provide your AWS Secret Access Key:',
-        default: 'Hello',
       },
       {
         type: 'input',
@@ -174,22 +52,20 @@ module.exports = class extends Generator {
         default: false,
       },
       {
+        type: 'confirm',
+        name: 'githubTravisEnabled',
+        message: 'Have you enabled Travis CI access to GitHub? (If not, you won\'t be able to deploy the repository)',
+        default: false,
+      },
+      {
         type: 'input',
         name: 'githubUser',
         message: 'Provide your GitHub username:',
-        default: 'username',
       },
       {
         type: 'password',
         name: 'githubPassword',
         message: 'Provide your GitHub password:',
-        default: 'password',
-      },
-      {
-        type: 'confirm',
-        name: 'githubTravisEnabled',
-        message: 'Have you enabled Travis CI access to GitHub? (If not, you won\'t be able to deploy the repository)',
-        default: false,
       },
     ];
 
@@ -197,25 +73,7 @@ module.exports = class extends Generator {
       .then((props) => {
         this.props = props;
 
-        const data = {
-          scopes: ['repo', 'user'],
-          note: `getting-started-at-${Date.now()}`,
-        };
-        const options = {
-          url: 'https://api.github.com/authorizations',
-          headers: {
-            'User-Agent': props.githubUser,
-          },
-          method: 'POST',
-          body: JSON.stringify(data),
-          resolveWithFullResponse: true,
-          auth: {
-            user: props.githubUser,
-            pass: props.githubPassword,
-          },
-        };
-
-        return requestPromise.post(options)
+        return getGithubAuth(props)
           .then((response) => {
             this.props.token = JSON.parse(response.body).token;
             return true;
@@ -228,23 +86,19 @@ module.exports = class extends Generator {
                   type: 'input',
                   name: 'githubAuthCode',
                   message: 'Provide your GitHub authentication code:',
-                  default: 'Hello',
                 },
               ];
 
               return this.prompt(authenticationCodePrompt)
-                .then((githubProp) => {
-                  options.headers['X-GitHub-OTP'] = githubProp.githubAuthCode;
-
-                  return requestPromise.post(options)
+                .then(githubProp => getGithubAuthOtp(props, githubProp)
                     .then((authenticationCodeResponse) => {
                       this.props.token = JSON.parse(authenticationCodeResponse.body).token;
                       return true;
                     })
                     .catch(() => {
                       throw new Error('GitHub login failed.');
-                    });
-                });
+                    }),
+                );
             }
             throw new Error('GitHub login failed.');
           });
@@ -260,7 +114,7 @@ module.exports = class extends Generator {
   }
 
   install() {
-    this.installDependencies({bower: false});
+    this.installDependencies({ bower: false });
   }
 
   end() {
@@ -268,9 +122,9 @@ module.exports = class extends Generator {
       // Initialize local repo
       this.spawnCommandSync('git', ['init']);
       this.spawnCommandSync('git', ['add', '.']);
-      this.spawnCommandSync('git', ['commit', '-m', '"Initial commit"']);
+      this.spawnCommandSync('git', ['commit', '-m', '"Generate project"']);
       // Create remote remote repo and push
-      this.createGitHubRepo()
+      createGitHubRepo(this.props)
         .then(() => {
           const orgOption = this.props.githubOrgName ?
             this.props.githubOrgName : this.props.githubUser;
@@ -279,17 +133,23 @@ module.exports = class extends Generator {
 
           // Hook travis
           if (this.props.githubTravisEnabled === false) process.exit();
-          this.getTravisAccessToken()
+          getTravisAccessToken(this.props)
             .then((travisAccessTokenResponse) => {
               this.props.travisAccessToken = JSON.parse(travisAccessTokenResponse).access_token;
 
-              this.loopWhileSyncing()
+              // Wait for Travis to finish syncing
+              loopWhileSyncing(this.props)
                 .then(() => {
-                  // Add AWS credentials to .travis.yml
-                  this.spawnCommandSync('travis', ['encrypt', `AWS_ACCESS_KEY_ID=${this.props.id}`, `AWS_SECRET_ACCESS_KEY=${this.props.secret}`, '--override', '--add', 'env.matrix']);
-                  // Trigger travis by pushing updated .travis.yml
-                  this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml"']);
-                  this.spawnCommandSync('git', ['push', 'origin', 'master']);
+                  // Add environment variables to .travis.yml
+                  encryptTravisEnvVars(this.props)
+                    .then(() => {
+                      // Trigger travis by pushing updated .travis.yml
+                      this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml environment variables"']);
+                      this.spawnCommandSync('git', ['push', 'origin', 'master']);
+                    })
+                    .catch(() => {
+                      throw new Error('Encrypting environment variables for Travis failed.');
+                    });
                 })
                 .catch(() => {
                   throw new Error('Enabling Travis with repository failed.');
