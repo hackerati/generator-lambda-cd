@@ -4,3 +4,5 @@ yarn-error.log*
 
 # WebStorm files
 .idea/
+
+.yo-rc.json

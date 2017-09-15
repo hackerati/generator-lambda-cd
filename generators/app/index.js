@@ -16,64 +16,54 @@ module.exports = class extends Generator {
     // Have Yeoman greet the user.
     this.log(yosay(`Welcome to the flawless ${chalk.red('generator-lambda-cd')} generator!`));
 
-    const prompts = [
-      {
-        type: 'input',
-        name: 'sampleText',
-        message: 'What should the sample text be?',
-        default: 'Hello Lambda',
-      },
+    const localRepoPrompts = [];
+
+    const deployPrompts = [
       {
         type: 'input',
         name: 'id',
         message: 'Provide your AWS Access Key ID:',
+        store: true,
       },
       {
         type: 'password',
         name: 'secret',
         message: 'Provide your AWS Secret Access Key:',
-      },
-      {
-        type: 'input',
-        name: 'githubOrgName',
-        message: 'What is the name of your GitHub organization (Leave it blank for your GitHub user)?',
-        default: '',
-      },
-      {
-        type: 'input',
-        name: 'githubRepoName',
-        message: 'What should the name of the GitHub repository be?',
-        default: 'my-lambda-cd',
+        store: true,
       },
       {
         type: 'confirm',
         name: 'privateGithubRepo',
         message: 'Should your repository be private?',
         default: false,
+        store: true,
       },
       {
         type: 'confirm',
         name: 'githubTravisEnabled',
         message: 'Have you enabled Travis CI access to GitHub? (If not, you won\'t be able to deploy the repository)',
         default: false,
+        store: true,
       },
       {
         type: 'input',
         name: 'githubUser',
         message: 'Provide your GitHub username:',
+        store: true,
       },
       {
         type: 'password',
         name: 'githubPassword',
         message: 'Provide your GitHub password:',
+        store: true,
       },
     ];
 
-    return this.prompt(prompts)
+    return this.prompt(this.options.deploy ? localRepoPrompts.concat(deployPrompts) : localRepoPrompts)
       .then((props) => {
         this.props = props;
 
-        return getGithubAuth(props)
+        return !this.options.deploy ? true : getGithubAuth(props)
           .then((response) => {
             this.props.token = JSON.parse(response.body).token;
             return true;
