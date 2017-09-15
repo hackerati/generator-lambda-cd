@@ -21,8 +21,10 @@ module.exports = class extends Generator {
         private: this.props.privateGithubRepo,
       };
 
+      const urlOption = this.props.githubOrgName ? `orgs/${this.props.githubOrgName}` : 'user';
+
       const options = {
-        url: 'https://api.github.com/user/repos',
+        url: `https://api.github.com/${urlOption}/repos`,
         headers,
         method: 'POST',
         body: JSON.stringify(data),
@@ -54,6 +56,12 @@ module.exports = class extends Generator {
         name: 'secret',
         message: 'Provide your AWS Secret Access Key:',
         default: 'Hello',
+      },
+      {
+        type: 'input',
+        name: 'githubOrgName',
+        message: 'What is the name of your GitHub organization (Leave it blank for your GitHub user)?',
+        default: '',
       },
       {
         type: 'input',
@@ -160,7 +168,9 @@ module.exports = class extends Generator {
       // Create remote remote repo and push
       this.createGitHubRepo()
         .then(() => {
-          this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${this.props.githubUser}/${this.props.githubRepoName}.git`]);
+          const orgOption = this.props.githubOrgName ?
+            this.props.githubOrgName : this.props.githubUser;
+          this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${orgOption}/${this.props.githubRepoName}.git`]);
           this.spawnCommandSync('git', ['push', 'origin', 'master']);
           // Hook travis
           const { status: loggedIn } = this.spawnCommandSync('travis', ['whoami']);
