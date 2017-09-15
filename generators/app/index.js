@@ -2,6 +2,8 @@ const Generator = require('yeoman-generator');
 const chalk = require('chalk');
 const yosay = require('yosay');
 const requestPromise = require('request-promise');
+const rsa = require('ursa');
+const fs = require('fs');
 
 module.exports = class extends Generator {
   constructor(args, opts) {
@@ -50,6 +52,40 @@ module.exports = class extends Generator {
       };
 
       return requestPromise.post(options);
+    };
+
+    this.encryptTravisEnvVars = () => {
+      const headers = {
+        'User-Agent': 'TravisMyClient/1.0.0',
+        Authorization: `token ${this.props.travisAccessToken}`,
+        Accept: 'application/vnd.travis-ci.2+json',
+      };
+
+      const orgOption = this.props.githubOrgName ? this.props.githubOrgName : this.props.githubUser;
+      const options = {
+        url: `https://api.travis-ci.org/repos/${orgOption}/${this.props.githubRepoName}/key`,
+        method: 'GET',
+        headers,
+      };
+
+      return requestPromise.get(options)
+        .then((resp) => {
+          const idEnvVar = `AWS_ACCESS_KEY_ID=${this.props.id}`;
+          const secretEnvVar = `AWS_SECRET_ACCESS_KEY=${this.props.secret}`;
+          const publicKey = rsa.createPublicKey(JSON.parse(resp).key);
+          const secureId = publicKey
+            .encrypt(idEnvVar, undefined, undefined, rsa.RSA_PKCS1_PADDING)
+            .toString('base64');
+          const secureSecret = publicKey
+            .encrypt(secretEnvVar, undefined, undefined, rsa.RSA_PKCS1_PADDING)
+            .toString('base64');
+          fs.appendFileSync('.travis.yml',
+            `env:\n  global:\n    - secure: ${secureId}\n    - secure: ${secureSecret}`);
+          return true;
+        })
+        .catch(() => {
+          throw new Error('Could not get travis public key.');
+        });
     };
 
     this.loopWhileSyncing = () => this.whoAmI(this.props.travisAccessToken)
@@ -177,13 +213,11 @@ module.exports = class extends Generator {
         type: 'input',
         name: 'githubUser',
         message: 'Provide your GitHub username:',
-        default: 'username',
       },
       {
         type: 'password',
         name: 'githubPassword',
         message: 'Provide your GitHub password:',
-        default: 'password',
       },
       {
         type: 'confirm',
@@ -260,7 +294,7 @@ module.exports = class extends Generator {
   }
 
   install() {
-    this.installDependencies({bower: false});
+    this.installDependencies({ bower: false });
   }
 
   end() {
@@ -286,10 +320,11 @@ module.exports = class extends Generator {
               this.loopWhileSyncing()
                 .then(() => {
                   // Add AWS credentials to .travis.yml
-                  this.spawnCommandSync('travis', ['encrypt', `AWS_ACCESS_KEY_ID=${this.props.id}`, `AWS_SECRET_ACCESS_KEY=${this.props.secret}`, '--override', '--add', 'env.matrix']);
-                  // Trigger travis by pushing updated .travis.yml
-                  this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml"']);
-                  this.spawnCommandSync('git', ['push', 'origin', 'master']);
+                  this.encryptTravisEnvVars().then(() => {
+                    // Trigger travis by pushing updated .travis.yml
+                    this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml"']);
+                    this.spawnCommandSync('git', ['push', 'origin', 'master']);
+                  });
                 })
                 .catch(() => {
                   throw new Error('Enabling Travis with repository failed.');
