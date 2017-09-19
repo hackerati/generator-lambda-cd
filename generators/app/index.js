@@ -9,7 +9,7 @@ module.exports = class extends Generator {
   constructor(args, opts) {
     super(args, opts);
 
-    this.option('deploy');
+    this.option('skip-deploy');
   }
 
   prompting() {
@@ -59,12 +59,12 @@ module.exports = class extends Generator {
       },
     ];
 
-    return this.prompt(this.options.deploy ?
-      localRepoPrompts.concat(deployPrompts) : localRepoPrompts)
+    return this.prompt(this.options.skipDeploy ?
+      localRepoPrompts : localRepoPrompts.concat(deployPrompts))
       .then((props) => {
         this.props = props;
 
-        return !this.options.deploy ? true : getGithubAuth(props)
+        return this.options.skipDeploy ? true : getGithubAuth(props)
           .then((response) => {
             this.props.token = JSON.parse(response.body).token;
             return true;
@@ -109,7 +109,7 @@ module.exports = class extends Generator {
   }
 
   end() {
-    if (this.options.deploy) {
+    if (!this.options.skipDeploy) {
       // Initialize local repo
       this.spawnCommandSync('git', ['init']);
       this.spawnCommandSync('git', ['add', '.']);

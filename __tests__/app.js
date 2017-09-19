@@ -11,7 +11,7 @@ describe('generator-lambda-cd:app', () => {
         catch: () => {},
       }),
     });
-    return helpers.run(path.join(__dirname, '../generators/app'));
+    return helpers.run(path.join(__dirname, '../generators/app')).withOptions({ 'skip-deploy': true });
   });
 
   it('creates files', () => {
