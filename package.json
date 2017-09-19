@@ -37,7 +37,7 @@
     "nsp": "^2.6.3",
     "request-promise": "^4.2.1",
     "ursa": "^0.9.4",
-    "yeoman-generator": "^1.0.0",
+    "yeoman-generator": "^2.0.0",
     "yosay": "^2.0.0"
   },
   "jest": {
