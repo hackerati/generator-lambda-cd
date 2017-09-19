@@ -59,7 +59,8 @@ module.exports = class extends Generator {
       },
     ];
 
-    return this.prompt(this.options.deploy ? localRepoPrompts.concat(deployPrompts) : localRepoPrompts)
+    return this.prompt(this.options.deploy ?
+      localRepoPrompts.concat(deployPrompts) : localRepoPrompts)
       .then((props) => {
         this.props = props;
 
