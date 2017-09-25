@@ -1,16 +1,15 @@
 const requestPromise = require('request-promise');
 const rsa = require('ursa');
-const fs = require('fs');
 
 
-// Callback for array find
+// Callback to find hook by repo name
 const getRepositoryHook = props => (element => element.name === props.githubRepoName);
 
 // Get user's Travis information
 const whoAmI = (props) => {
   const headers = {
     'User-Agent': 'TravisMyClient/1.0.0',
-    Authorization: `token ${props.travisAccessToken}`,
+    Authorization: `token ${props.travisToken}`,
     Accept: 'application/vnd.travis-ci.2+json',
   };
 
@@ -27,7 +26,7 @@ const whoAmI = (props) => {
 const getUserHooks = (props) => {
   const headers = {
     'User-Agent': 'TravisMyClient/1.0.0',
-    Authorization: `token ${props.travisAccessToken}`,
+    Authorization: `token ${props.travisToken}`,
     Accept: 'application/vnd.travis-ci.2+json',
     'Content-Type': 'application/json',
   };
@@ -42,10 +41,10 @@ const getUserHooks = (props) => {
 };
 
 // Enable a GitHub repo in Travis
-const enableGitHubRepo = (props) => {
+const enableGithubRepo = (props) => {
   const headers = {
     'User-Agent': 'TravisMyClient/1.0.0',
-    Authorization: `token ${props.travisAccessToken}`,
+    Authorization: `token ${props.travisToken}`,
     Accept: 'application/vnd.travis-ci.2+json',
     'Content-Type': 'application/json',
   };
@@ -76,14 +75,14 @@ const enableGitHubRepo = (props) => {
 
 
 // Get access token for Travis via GitHub
-exports.getTravisAccessToken = (props) => {
+exports.getTravisToken = (props) => {
   const headers = {
     'Content-Type': 'application/json',
     'User-Agent': 'TravisMyClient/1.0.0',
     Accept: 'application/vnd.travis-ci.2+json',
   };
   const data = {
-    github_token: props.token,
+    github_token: props.githubToken,
   };
   const options = {
     url: 'https://api.travis-ci.org/auth/github',
@@ -99,7 +98,7 @@ exports.getTravisAccessToken = (props) => {
 exports.encryptTravisEnvVars = (props) => {
   const headers = {
     'User-Agent': 'TravisMyClient/1.0.0',
-    Authorization: `token ${props.travisAccessToken}`,
+    Authorization: `token ${props.travisToken}`,
     Accept: 'application/vnd.travis-ci.2+json',
   };
 
@@ -115,15 +114,14 @@ exports.encryptTravisEnvVars = (props) => {
       const idEnvVar = `AWS_ACCESS_KEY_ID=${props.id}`;
       const secretEnvVar = `AWS_SECRET_ACCESS_KEY=${props.secret}`;
       const publicKey = rsa.createPublicKey(JSON.parse(resp).key);
-      const secureId = publicKey
+      const secureEnvVars = {};
+      secureEnvVars.secureId = publicKey
         .encrypt(idEnvVar, undefined, undefined, rsa.RSA_PKCS1_PADDING)
         .toString('base64');
-      const secureSecret = publicKey
+      secureEnvVars.secureSecret = publicKey
         .encrypt(secretEnvVar, undefined, undefined, rsa.RSA_PKCS1_PADDING)
         .toString('base64');
-      fs.appendFileSync('.travis.yml',
-        `\nenv:\n  global:\n    - secure: ${secureId}\n    - secure: ${secureSecret}`);
-      return true;
+      return secureEnvVars;
     })
     .catch(() => {
       throw new Error('Could not get travis public key.');
@@ -137,7 +135,7 @@ exports.loopWhileSyncing = props => whoAmI(props)
     if (isSyncing) {
       return this.loopWhileSyncing(props);
     }
-    return enableGitHubRepo(props);
+    return enableGithubRepo(props);
   })
   .catch(() => {
     throw new Error('Syncing Travis account failed.');

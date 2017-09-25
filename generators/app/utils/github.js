@@ -1,11 +1,11 @@
 const requestPromise = require('request-promise');
 
 
-// Authenticate with GitHub using username and password
+// Authenticate using username, password, and optionally two factor one-time password
 exports.getGithubAuth = (props) => {
   const data = {
     scopes: ['repo', 'user'],
-    note: `getting-started-at-${Date.now()}`,
+    note: `generator-lambda-cd-${Date.now()}`,
   };
   const options = {
     url: 'https://api.github.com/authorizations',
@@ -21,38 +21,35 @@ exports.getGithubAuth = (props) => {
     },
   };
 
-  return requestPromise.post(options);
-};
-
-// Authenticate with GitHub using username, password, and two factor one-time password
-exports.getGithubAuthOtp = (props, githubProp) => {
-  const data = {
-    scopes: ['repo', 'user'],
-    note: `getting-started-at-${Date.now()}`,
-  };
-  const options = {
-    url: 'https://api.github.com/authorizations',
-    headers: {
-      'User-Agent': props.githubUser,
-      'X-GitHub-OTP': githubProp.githubAuthCode,
-    },
-    method: 'POST',
-    body: JSON.stringify(data),
-    resolveWithFullResponse: true,
-    auth: {
-      user: props.githubUser,
-      pass: props.githubPassword,
-    },
-  };
-  options.headers['X-GitHub-OTP'] = githubProp.githubAuthCode;
+  if (props.githubAuthCode) {
+    options.headers['X-GitHub-OTP'] = props.githubAuthCode;
+  }
 
   return requestPromise.post(options);
 };
 
-// Create a repo in GitHub
-exports.createGitHubRepo = (props) => {
+// Get a repo
+exports.getGithubRepo = (props) => {
   const headers = {
-    Authorization: `token ${props.token}`,
+    Authorization: `token ${props.githubToken}`,
+    'User-Agent': props.githubUser,
+  };
+
+  const urlOption = props.githubUser !== props.githubOrgName ? `orgs/${props.githubOrgName}` : 'user';
+
+  const options = {
+    url: `https://api.github.com/${urlOption}/repos`,
+    headers,
+    method: 'GET',
+  };
+
+  return requestPromise.get(options);
+};
+
+// Create a repo
+exports.createGithubRepo = (props) => {
+  const headers = {
+    Authorization: `token ${props.githubToken}`,
     'User-Agent': props.githubUser,
   };
 
@@ -62,7 +59,7 @@ exports.createGitHubRepo = (props) => {
     private: props.privateGithubRepo,
   };
 
-  const urlOption = props.githubOrgName ? `orgs/${props.githubOrgName}` : 'user';
+  const urlOption = props.githubUser !== props.githubOrgName ? `orgs/${props.githubOrgName}` : 'user';
 
   const options = {
     url: `https://api.github.com/${urlOption}/repos`,

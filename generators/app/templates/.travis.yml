@@ -19,3 +19,8 @@ deploy:
   script: make deploy
   on:
     branch: master
+
+env:
+  global:
+    - secure: <%= secureId %>
+    - secure: <%= secureSecret %>

@@ -1,8 +1,8 @@
 const Generator = require('yeoman-generator');
 const chalk = require('chalk');
 const yosay = require('yosay');
-const { getGithubAuth, getGithubAuthOtp, createGitHubRepo } = require('./utils/github');
-const { getTravisAccessToken, encryptTravisEnvVars, loopWhileSyncing } = require('./utils/travis');
+const { getGithubAuth, getGithubRepo, createGithubRepo } = require('./utils/github');
+const { getTravisToken, encryptTravisEnvVars, loopWhileSyncing } = require('./utils/travis');
 
 
 module.exports = class extends Generator {
@@ -10,41 +10,118 @@ module.exports = class extends Generator {
     super(args, opts);
 
     this.option('skip-deploy');
+
+    this.templateProps = {
+      secureId: '',
+      secureSecret: '',
+    };
+    this.deployProps = {};
+
+    this.getOrCreateRepo = (response) => {
+      this.deployProps.githubToken = JSON.parse(response.body).token;
+      const repoPrompts = [
+        {
+          type: 'input',
+          name: 'githubOrgName',
+          message: 'What is the name of your GitHub organization?',
+          default: this.deployProps.githubUser,
+          store: true,
+        },
+        {
+          type: 'input',
+          name: 'githubRepoName',
+          message: 'What should the name of the GitHub repository be?',
+          default: process.cwd().split('/').pop(),
+          store: true,
+        },
+      ];
+
+      return this.prompt(repoPrompts)
+        .then((repoProps) => {
+          Object.assign(this.deployProps, repoProps);
+          return getGithubRepo(this.deployProps)
+            .then(() => {
+              // Initialize local repo
+              this.spawnCommandSync('git', ['init', '.']);
+              this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${repoProps.githubOrgName}/${repoProps.githubRepoName}.git`]);
+              this.spawnCommandSync('git', ['pull', 'origin', 'master']);
+              return this.doTravis();
+            },
+            // Create remote remote repo
+            () => {
+              const privatePrompt = [
+                {
+                  type: 'confirm',
+                  name: 'privateGithubRepo',
+                  message: 'Should your repository be private?',
+                  default: false,
+                  store: true,
+                },
+              ];
+
+              return this.prompt(privatePrompt)
+                .then((privateProp) => {
+                  Object.assign(this.deployProps, privateProp);
+                  return createGithubRepo(this.deployProps)
+                    .then(() => this.doTravis())
+                    .catch(() => {
+                      throw new Error('GitHub repository creation failed.');
+                    });
+                });
+            });
+        });
+    };
+      // Hook travis
+    this.doTravis = () => getTravisToken(this.deployProps)
+      .then((travisTokenResponse) => {
+        this.deployProps.travisToken = JSON.parse(travisTokenResponse).access_token;
+
+        // Wait for Travis to finish syncing
+        return loopWhileSyncing(this.deployProps)
+          // Add environment variables to .travis.yml
+          .then(() => {
+            const environmentPrompts = [
+              {
+                type: 'input',
+                name: 'id',
+                message: 'Provide your AWS Access Key ID:',
+                store: true,
+              },
+              {
+                type: 'password',
+                name: 'secret',
+                message: 'Provide your AWS Secret Access Key:',
+              },
+            ];
+
+            return this.prompt(environmentPrompts)
+              .then((environmentProps) => {
+                Object.assign(this.deployProps, environmentProps);
+                return encryptTravisEnvVars(this.deployProps)
+                  .then((secureEnvVars) => {
+                    Object.assign(this.templateProps, secureEnvVars);
+                  })
+                  .catch(() => {
+                    throw new Error('Encrypting environment variables for Travis failed.');
+                  });
+              });
+          })
+          .catch(() => {
+            throw new Error('Enabling Travis with repository failed.');
+          });
+      })
+      .catch(() => {
+        throw new Error('Getting Travis access token failed. Please make sure you have granted travis-ci.org access to your Github account.');
+      });
   }
 
   prompting() {
     // Have Yeoman greet the user.
     this.log(yosay(`Welcome to the flawless ${chalk.red('generator-lambda-cd')} generator!`));
 
-    const localRepoPrompts = [];
+    const templatePrompts = [];
 
-    const deployPrompts = [
-      {
-        type: 'input',
-        name: 'id',
-        message: 'Provide your AWS Access Key ID:',
-        store: true,
-      },
-      {
-        type: 'password',
-        name: 'secret',
-        message: 'Provide your AWS Secret Access Key:',
-        store: true,
-      },
-      {
-        type: 'confirm',
-        name: 'privateGithubRepo',
-        message: 'Should your repository be private?',
-        default: false,
-        store: true,
-      },
-      {
-        type: 'confirm',
-        name: 'githubTravisEnabled',
-        message: 'Have you enabled Travis CI access to GitHub? (If not, you won\'t be able to deploy the repository)',
-        default: false,
-        store: true,
-      },
+    const loginPrompts = [
       {
         type: 'input',
         name: 'githubUser',
@@ -55,43 +132,49 @@ module.exports = class extends Generator {
         type: 'password',
         name: 'githubPassword',
         message: 'Provide your GitHub password:',
-        store: true,
       },
     ];
 
-    return this.prompt(this.options.skipDeploy ?
-      localRepoPrompts : localRepoPrompts.concat(deployPrompts))
-      .then((props) => {
-        this.props = props;
+    // Prompt for template props
+    return this.prompt(templatePrompts)
+      .then((templateProps) => {
+        Object.assign(this.templateProps, templateProps);
+        Object.assign(this.deployProps, templateProps);
 
-        return this.options.skipDeploy ? true : getGithubAuth(props)
-          .then((response) => {
-            this.props.token = JSON.parse(response.body).token;
-            return true;
-          })
-          .catch((error) => {
-            // There is a two-factor authentication enabled; Ask for the authentication code
-            if (error.statusCode === 401) {
-              const authenticationCodePrompt = [
-                {
-                  type: 'input',
-                  name: 'githubAuthCode',
-                  message: 'Provide your GitHub authentication code:',
-                },
-              ];
+        if (this.options.skipDeploy) {
+          return true;
+        }
 
-              return this.prompt(authenticationCodePrompt)
-                .then(githubProp => getGithubAuthOtp(props, githubProp)
-                    .then((authenticationCodeResponse) => {
-                      this.props.token = JSON.parse(authenticationCodeResponse.body).token;
-                      return true;
-                    })
-                    .catch(() => {
-                      throw new Error('GitHub login failed.');
-                    }),
-                );
-            }
-            throw new Error('GitHub login failed.');
+        // Prompt for login props
+        return this.prompt(loginPrompts)
+          .then((loginProps) => {
+            Object.assign(this.deployProps, loginProps);
+            return getGithubAuth(this.deployProps)
+              .then(response => this.getOrCreateRepo(response))
+              .catch((error) => {
+                // There is a two-factor authentication enabled; Ask for the authentication code
+                if (error.statusCode === 401) {
+                  const authCodePrompt = [
+                    {
+                      type: 'input',
+                      name: 'githubAuthCode',
+                      message: 'Provide your GitHub authentication code:',
+                    },
+                  ];
+
+                  return this.prompt(authCodePrompt)
+                    .then((authCodeProp) => {
+                      Object.assign(this.deployProps, authCodeProp);
+                      return getGithubAuth(this.deployProps)
+                        .then(authenticationCodeResponse =>
+                          this.getOrCreateRepo(authenticationCodeResponse))
+                        .catch(() => {
+                          throw new Error('GitHub login failed.');
+                        });
+                    });
+                }
+                throw new Error('GitHub login failed.');
+              });
           });
       });
   }
@@ -100,7 +183,7 @@ module.exports = class extends Generator {
     this.fs.copyTpl(
       this.templatePath('{,.,**/}*'),
       this.destinationPath('.'),
-      this.props,
+      this.templateProps,
     );
   }
 
@@ -110,49 +193,9 @@ module.exports = class extends Generator {
 
   end() {
     if (!this.options.skipDeploy) {
-      // Initialize local repo
-      this.spawnCommandSync('git', ['init']);
       this.spawnCommandSync('git', ['add', '.']);
-      this.spawnCommandSync('git', ['commit', '-m', '"Generate project"']);
-      // Create remote remote repo and push
-      createGitHubRepo(this.props)
-        .then(() => {
-          const orgOption = this.props.githubOrgName ?
-            this.props.githubOrgName : this.props.githubUser;
-          this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${orgOption}/${this.props.githubRepoName}.git`]);
-          this.spawnCommandSync('git', ['push', 'origin', 'master']);
-
-          // Hook travis
-          if (this.props.githubTravisEnabled === false) process.exit();
-          getTravisAccessToken(this.props)
-            .then((travisAccessTokenResponse) => {
-              this.props.travisAccessToken = JSON.parse(travisAccessTokenResponse).access_token;
-
-              // Wait for Travis to finish syncing
-              loopWhileSyncing(this.props)
-                .then(() => {
-                  // Add environment variables to .travis.yml
-                  encryptTravisEnvVars(this.props)
-                    .then(() => {
-                      // Trigger travis by pushing updated .travis.yml
-                      this.spawnCommandSync('git', ['commit', '-am', '"update .travis.yml environment variables"']);
-                      this.spawnCommandSync('git', ['push', 'origin', 'master']);
-                    })
-                    .catch(() => {
-                      throw new Error('Encrypting environment variables for Travis failed.');
-                    });
-                })
-                .catch(() => {
-                  throw new Error('Enabling Travis with repository failed.');
-                });
-            })
-            .catch(() => {
-              throw new Error('Getting Travis access token failed.');
-            });
-        })
-        .catch(() => {
-          throw new Error('GitHub repository creation failed.');
-        });
+      this.spawnCommandSync('git', ['commit', '-m', '"Generate project via yeoman"']);
+      this.spawnCommandSync('git', ['push', 'origin', 'master']);
     }
   }
 };
