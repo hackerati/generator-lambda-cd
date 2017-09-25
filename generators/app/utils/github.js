@@ -35,10 +35,8 @@ exports.getGithubRepo = (props) => {
     'User-Agent': props.githubUser,
   };
 
-  const urlOption = props.githubUser !== props.githubOrgName ? `orgs/${props.githubOrgName}` : 'user';
-
   const options = {
-    url: `https://api.github.com/${urlOption}/repos`,
+    url: `https://api.github.com/repos/${props.githubOrgName}/${props.githubRepoName}`,
     headers,
     method: 'GET',
   };

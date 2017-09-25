@@ -2,9 +2,6 @@ const requestPromise = require('request-promise');
 const rsa = require('ursa');
 
 
-// Callback to find hook by repo name
-const getRepositoryHook = props => (element => element.name === props.githubRepoName);
-
 // Get user's Travis information
 const whoAmI = (props) => {
   const headers = {
@@ -64,7 +61,7 @@ const enableGithubRepo = (props) => {
   return getUserHooks(props)
     .then((hooksResponse) => {
       const hooks = JSON.parse(hooksResponse).hooks;
-      data.hook.id = hooks.find(getRepositoryHook.bind(this, props)).id;
+      data.hook.id = hooks.find(hook => hook.name === props.githubRepoName).id;
       options.body = JSON.stringify(data);
       return requestPromise.put(options);
     })

@@ -17,6 +17,12 @@ module.exports = class extends Generator {
     };
     this.deployProps = {};
 
+    this.initRepo = () => {
+      this.spawnCommandSync('git', ['init', '.']);
+      this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${this.deployProps.githubOrgName}/${this.deployProps.githubRepoName}.git`]);
+      this.spawnCommandSync('git', ['pull', 'origin', 'master']);
+    };
+
     this.getOrCreateRepo = (response) => {
       this.deployProps.githubToken = JSON.parse(response.body).token;
       const repoPrompts = [
@@ -42,13 +48,11 @@ module.exports = class extends Generator {
           return getGithubRepo(this.deployProps)
             .then(() => {
               // Initialize local repo
-              this.spawnCommandSync('git', ['init', '.']);
-              this.spawnCommandSync('git', ['remote', 'add', 'origin', `git@github.com:${repoProps.githubOrgName}/${repoProps.githubRepoName}.git`]);
-              this.spawnCommandSync('git', ['pull', 'origin', 'master']);
+              this.initRepo();
               return this.doTravis();
-            },
-            // Create remote remote repo
-            () => {
+            })
+            .catch(() => {
+              // Create remote remote repo
               const privatePrompt = [
                 {
                   type: 'confirm',
@@ -63,7 +67,13 @@ module.exports = class extends Generator {
                 .then((privateProp) => {
                   Object.assign(this.deployProps, privateProp);
                   return createGithubRepo(this.deployProps)
-                    .then(() => this.doTravis())
+                    .then(() => {
+                      // Travis cannot hook empty repos, so initialize and push it
+                      this.initRepo();
+                      this.spawnCommandSync('git', ['commit', '--allow-empty', '-am', '"Initialize project"']);
+                      this.spawnCommandSync('git', ['push', 'origin', 'master']);
+                      return this.doTravis();
+                    })
                     .catch(() => {
                       throw new Error('GitHub repository creation failed.');
                     });
@@ -100,6 +110,7 @@ module.exports = class extends Generator {
                 return encryptTravisEnvVars(this.deployProps)
                   .then((secureEnvVars) => {
                     Object.assign(this.templateProps, secureEnvVars);
+                    return true;
                   })
                   .catch(() => {
                     throw new Error('Encrypting environment variables for Travis failed.');
