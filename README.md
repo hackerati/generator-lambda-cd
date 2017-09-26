@@ -18,7 +18,7 @@ yo lambda-cd
 
 ## Development
 
-[See our contribution guidelines.](/hackerati/generator-lambda-cd/blob/master/contributing.md)
+[See our contribution guidelines.](/contributing.md)
 
 
 ## Getting To Know Yeoman

@@ -31,6 +31,6 @@ To contribute:
   - clone your fork
   - make sure your branch is up-to-date with the master branch of the original repo
   - make your changes to the code, docs, tests, etc.
-  - make sure linting and tests are still working after changes
+  - make sure linting and tests still pass after changes (`yarn test`)
   - push your changes to your fork
   - open a pull request against the master branch of the original repo with a [reference to the issue for your change](https://github.com/blog/1506-closing-issues-via-pull-requests)
