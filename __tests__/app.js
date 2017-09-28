@@ -5,7 +5,7 @@ const requestPromise = require('request-promise');
 const sinon = require('sinon');
 
 const { getGithubAuth, getGithubRepo, createGithubRepo } = require('../generators/app/utils/github');
-const { getTravisToken, encryptTravisEnvVars } = require('../generators/app/utils/travis');
+const { getTravisToken, encryptTravisEnvVars, loopWhileSyncing } = require('../generators/app/utils/travis');
 
 const sandbox = sinon.sandbox.create();
 
@@ -206,7 +206,7 @@ describe('Travis util', () => {
   });
 
   it('encrypts environment variables', () => {
-    const promise = Promise.resolve(JSON.stringify({
+    const getPromise = Promise.resolve(JSON.stringify({
       key: '-----BEGIN PUBLIC KEY-----\n' +
         'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArgov0KHVYlOtS15/WIO0\n' +
         'Hpz9NIuWQiH/9VuCqjEnsMJdZR20NsxiNCjMTjOXtl8jCGFAp8fyb5peT7Qlp4xZ\n' +
@@ -217,7 +217,7 @@ describe('Travis util', () => {
         'dQIDAQAB\n' +
         '-----END PUBLIC KEY-----\n',
     }));
-    const getStub = sandbox.stub(requestPromise, 'get').returns(promise);
+    const getStub = sandbox.stub(requestPromise, 'get').returns(getPromise);
     const props = {
       id: 'test-id',
       secret: 'test-secret',
@@ -240,6 +240,67 @@ describe('Travis util', () => {
       }));
       expect(result).toHaveProperty('secureId');
       expect(result).toHaveProperty('secureSecret');
+    });
+  });
+
+  it('makes correct requests when enabling the github repo (non-recursive)', () => {
+    const getPromise = Promise.resolve(JSON.stringify({
+      // For whoAmIResponse
+      user: {
+        is_syncing: false,
+      },
+      // For hooksResponse
+      hooks: [
+        {
+          id: 1234,
+          name: 'test-repo',
+        },
+      ],
+    }));
+    const getStub = sandbox.stub(requestPromise, 'get').returns(getPromise);
+    const putStub = sandbox.stub(requestPromise, 'put').returns(Promise.resolve());
+    const props = {
+      githubRepoName: 'test-repo',
+      travisToken: 'test-token',
+    };
+
+    expect.assertions(2);
+    return loopWhileSyncing(props).then((result) => {
+      sandbox.assert.calledTwice(getStub);
+      expect(getStub.args).toEqual([
+        [{
+          headers: {
+            'User-Agent': 'TravisMyClient/1.0.0',
+            Authorization: 'token test-token',
+            Accept: 'application/vnd.travis-ci.2+json',
+          },
+          method: 'GET',
+          url: 'https://api.travis-ci.org/users',
+        }],
+        [{
+          headers: {
+            'User-Agent': 'TravisMyClient/1.0.0',
+            Authorization: 'token test-token',
+            Accept: 'application/vnd.travis-ci.2+json',
+          },
+          method: 'GET',
+          url: 'https://api.travis-ci.org/hooks',
+        }],
+      ]);
+      sandbox.assert.calledOnce(putStub);
+      sandbox.assert.calledWith(putStub, sinon.match({
+        body: sinon.match.string,
+        headers: {
+          Accept: 'application/vnd.travis-ci.2+json',
+          Authorization: 'token test-token',
+          'Content-Type': 'application/json',
+          'User-Agent': 'TravisMyClient/1.0.0',
+        },
+        method: 'PUT',
+        url: 'https://api.travis-ci.org/hooks',
+      }));
+      sandbox.assert.callOrder(getStub, getStub, putStub);
+      expect(result).toBeUndefined();
     });
   });
 });

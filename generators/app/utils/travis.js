@@ -25,7 +25,6 @@ const getUserHooks = (props) => {
     'User-Agent': 'TravisMyClient/1.0.0',
     Authorization: `token ${props.travisToken}`,
     Accept: 'application/vnd.travis-ci.2+json',
-    'Content-Type': 'application/json',
   };
 
   const options = {
