@@ -42,44 +42,39 @@ describe('generator-lambda-cd:app', () => {
 });
 
 describe('Github util', () => {
-  const promise = {
-    then: () => {},
-  };
-
-  beforeEach(() => {
-    this.getStub = sandbox.stub(requestPromise, 'get').returns(promise);
-    this.postStub = sandbox.stub(requestPromise, 'post').returns(promise);
-  });
-
   afterEach(() => {
     sandbox.restore();
   });
 
   it('calls a post request correctly for auth', () => {
+    const postStub = sandbox.stub(requestPromise, 'post').returns(Promise.resolve());
     const props = {
       githubUser: 'test-user',
       githubPassword: 'test-password',
     };
 
     expect.assertions(1);
-    expect(getGithubAuth(props)).toBe(promise);
-    sandbox.assert.calledOnce(this.postStub);
-    sandbox.assert.calledWith(this.postStub, sinon.match({
-      auth: {
-        pass: 'test-password',
-        user: 'test-user',
-      },
-      body: sinon.match.string,
-      headers: {
-        'User-Agent': 'test-user',
-      },
-      method: 'POST',
-      resolveWithFullResponse: true,
-      url: 'https://api.github.com/authorizations',
-    }));
+    return getGithubAuth(props).then((result) => {
+      sandbox.assert.calledOnce(postStub);
+      sandbox.assert.calledWith(postStub, sinon.match({
+        auth: {
+          pass: 'test-password',
+          user: 'test-user',
+        },
+        body: sinon.match.string,
+        headers: {
+          'User-Agent': 'test-user',
+        },
+        method: 'POST',
+        resolveWithFullResponse: true,
+        url: 'https://api.github.com/authorizations',
+      }));
+      expect(result).toBeUndefined();
+    });
   });
 
   it('calls a post request correctly for auth with OTP', () => {
+    const postStub = sandbox.stub(requestPromise, 'post').returns(Promise.resolve());
     const props = {
       githubUser: 'test-user',
       githubPassword: 'test-password',
@@ -87,25 +82,28 @@ describe('Github util', () => {
     };
 
     expect.assertions(1);
-    expect(getGithubAuth(props)).toBe(promise);
-    sandbox.assert.calledOnce(this.postStub);
-    sandbox.assert.calledWith(this.postStub, sinon.match({
-      auth: {
-        pass: 'test-password',
-        user: 'test-user',
-      },
-      body: sinon.match.string,
-      headers: {
-        'User-Agent': 'test-user',
-        'X-GitHub-OTP': 1234,
-      },
-      method: 'POST',
-      resolveWithFullResponse: true,
-      url: 'https://api.github.com/authorizations',
-    }));
+    return getGithubAuth(props).then((result) => {
+      sandbox.assert.calledOnce(postStub);
+      sandbox.assert.calledWith(postStub, sinon.match({
+        auth: {
+          pass: 'test-password',
+          user: 'test-user',
+        },
+        body: sinon.match.string,
+        headers: {
+          'User-Agent': 'test-user',
+          'X-GitHub-OTP': 1234,
+        },
+        method: 'POST',
+        resolveWithFullResponse: true,
+        url: 'https://api.github.com/authorizations',
+      }));
+      expect(result).toBeUndefined();
+    });
   });
 
   it('calls a get request correctly for a github repo', () => {
+    const getStub = sandbox.stub(requestPromise, 'get').returns(Promise.resolve());
     const props = {
       githubUser: 'test-user',
       githubToken: 'test-token',
@@ -114,19 +112,22 @@ describe('Github util', () => {
     };
 
     expect.assertions(1);
-    expect(getGithubRepo(props)).toBe(promise);
-    sandbox.assert.calledOnce(this.getStub);
-    sandbox.assert.calledWith(this.getStub, sinon.match({
-      headers: {
-        Authorization: 'token test-token',
-        'User-Agent': 'test-user',
-      },
-      method: 'GET',
-      url: 'https://api.github.com/repos/test-org/test-repo',
-    }));
+    return getGithubRepo(props).then((result) => {
+      sandbox.assert.calledOnce(getStub);
+      sandbox.assert.calledWith(getStub, sinon.match({
+        headers: {
+          Authorization: 'token test-token',
+          'User-Agent': 'test-user',
+        },
+        method: 'GET',
+        url: 'https://api.github.com/repos/test-org/test-repo',
+      }));
+      expect(result).toBeUndefined();
+    });
   });
 
   it('calls a post request correctly for creating a github repo under the user', () => {
+    const postStub = sandbox.stub(requestPromise, 'post').returns(Promise.resolve());
     const props = {
       githubUser: 'test-user',
       githubToken: 'test-token',
@@ -135,20 +136,23 @@ describe('Github util', () => {
     };
 
     expect.assertions(1);
-    expect(createGithubRepo(props)).toBe(promise);
-    sandbox.assert.calledOnce(this.postStub);
-    sandbox.assert.calledWith(this.postStub, sinon.match({
-      body: sinon.match.string,
-      headers: {
-        Authorization: 'token test-token',
-        'User-Agent': 'test-user',
-      },
-      method: 'POST',
-      url: 'https://api.github.com/user/repos',
-    }));
+    return createGithubRepo(props).then((result) => {
+      sandbox.assert.calledOnce(postStub);
+      sandbox.assert.calledWith(postStub, sinon.match({
+        body: sinon.match.string,
+        headers: {
+          Authorization: 'token test-token',
+          'User-Agent': 'test-user',
+        },
+        method: 'POST',
+        url: 'https://api.github.com/user/repos',
+      }));
+      expect(result).toBeUndefined();
+    });
   });
 
   it('calls a post request correctly for creating a github repo under an org', () => {
+    const postStub = sandbox.stub(requestPromise, 'post').returns(Promise.resolve());
     const props = {
       githubUser: 'test-user',
       githubToken: 'test-token',
@@ -157,17 +161,19 @@ describe('Github util', () => {
     };
 
     expect.assertions(1);
-    expect(createGithubRepo(props)).toBe(promise);
-    sandbox.assert.calledOnce(this.postStub);
-    sandbox.assert.calledWith(this.postStub, sinon.match({
-      body: sinon.match.string,
-      headers: {
-        Authorization: 'token test-token',
-        'User-Agent': 'test-user',
-      },
-      method: 'POST',
-      url: 'https://api.github.com/orgs/test-org/repos',
-    }));
+    return createGithubRepo(props).then((result) => {
+      sandbox.assert.calledOnce(postStub);
+      sandbox.assert.calledWith(postStub, sinon.match({
+        body: sinon.match.string,
+        headers: {
+          Authorization: 'token test-token',
+          'User-Agent': 'test-user',
+        },
+        method: 'POST',
+        url: 'https://api.github.com/orgs/test-org/repos',
+      }));
+      expect(result).toBeUndefined();
+    });
   });
 });
 
