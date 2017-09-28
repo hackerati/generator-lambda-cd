@@ -99,9 +99,8 @@ exports.encryptTravisEnvVars = (props) => {
     Accept: 'application/vnd.travis-ci.2+json',
   };
 
-  const orgOption = props.githubOrgName ? props.githubOrgName : props.githubUser;
   const options = {
-    url: `https://api.travis-ci.org/repos/${orgOption}/${props.githubRepoName}/key`,
+    url: `https://api.travis-ci.org/repos/${props.githubOrgName}/${props.githubRepoName}/key`,
     method: 'GET',
     headers,
   };
